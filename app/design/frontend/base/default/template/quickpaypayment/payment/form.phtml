@@ -1,0 +1,166 @@
+<?php
+$payment = Mage::getModel('quickpaypayment/payment');
+?>
+<fieldset class="form-list">
+    <?php $_code=$this->getMethodCode() ?>
+    <ul id="payment_form_<?php echo $_code ?>" style="display:none">
+        <li>											
+            <?php echo Mage::helper('quickpaypayment')->__('Du har valgt at betale for ordren online. Lige så snart du har gennemført din ordre, vil du blive overført til betalingssystemet. Her skal du gennemføre din betaling. Når betalingen er gennemført, vil du automatisk blive sendt tilbage til vores forretning.'); ?>
+            
+            
+            
+            <?php if((int)$payment->getConfigData('transactionfee') == 1) : ?>
+
+				<?php //SHOW LIST OF SELECTED TRANSACTIONFEES IF ACTIVATED
+				   
+					$auth = base64_encode($payment->getConfigData('serviceuser').":".$payment->getConfigData('servicepass'));
+					$c = curl_init("https://api.quickpay.net/acquirers/nets/fees/".(int)($payment->getQuote()->getGrandTotal()*100));            
+					curl_setopt($c,CURLOPT_HTTPHEADER, array('Authorization: Basic '.$auth,'X-QuickPay-Client-API-Version: 0.1'));
+					curl_setopt($c,CURLOPT_RETURNTRANSFER, true);
+					curl_setopt($c,CURLOPT_SSL_VERIFYPEER, false);
+					
+					$fees = curl_exec($c);
+					curl_close($c);
+
+					$showfees = explode(",",$payment->getConfigData('showtransactionsfees'));
+				?>	
+				
+				<?php if(count($showfees) && $fees !== false) : ?>
+					<br>
+					<br>
+					<b><?php echo Mage::helper('quickpaypayment')->__("Tranaktionsgebyr"); ?></b>
+					<br>
+					<?php echo Mage::helper('quickpaypayment')->__("Der vil blive opkrævet et transaktionsgebyr ved brug af denne betalingsmetode. Gebyr størrelsen afhænger af kortvalg og vil blive tilføjet ved betaling."); ?>
+					<table cellpadding="5px" cellspacing="5px">
+						<tr>
+							<th style="font-weight:bold;"><? echo Mage::helper('quickpaypayment')->__("Korttype") ?></th>
+							<th style="font-weight:bold; padding-left:10px;"><? echo Mage::helper('quickpaypayment')->__("Gebyr") ?></th>
+							<th style="font-weight:bold; padding-left:10px; text-align:right;"><? echo Mage::helper('quickpaypayment')->__("Ny Total") ?></th>
+						</tr>
+					<?php foreach($showfees as $showfee) : ?>
+						<?php foreach(json_decode($fees) as $type) : ?>
+							<?php if($type->lockname == $showfee) : ?>
+								<tr>
+									<td><? echo Mage::helper('quickpaypayment')->__($type->lockname) ?></td>
+									<td style="font-weight:normal !important; margin-left:10px; padding-left:10px;" ><? echo str_replace(array('<span class="price">','</span>'),"",$this->helper('checkout')->formatPrice($type->fee/100)) ?></td>
+									<td style="font-weight:normal !important; margin-left:10px; padding-left:10px; text-align:right;"><? echo str_replace(array('<span class="price">','</span>'),"",$this->helper('checkout')->formatPrice($type->total/100)) ?></td>
+								</tr>
+							<?php endif; ?>
+						<?php endforeach; ?>
+					<?php endforeach; ?>
+					</table>
+				<?php endif; ?>
+			<?php endif; ?>            
+  
+            
+            <?php if ($payment->showTrustedList()) : ?>
+				<br>
+				<br>
+				<?php $logoArray = explode(',', $payment->getConfigData('trustedlogos')); ?>
+
+				<?php foreach($logoArray as $item) : ?>
+					<?php
+						switch ($item) 
+						{
+			        		case 'verisign_secure': {
+			        			?><img src="<?php echo $this->getSkinUrl('images/quickpaypayment/verisign_secure.gif') ?>" border="0" />&nbsp;&nbsp;<?php
+			        			break;
+			        		} 
+			        		case 'mastercard_securecode': {
+			        			?><img src="<?php echo $this->getSkinUrl('images/quickpaypayment/mastercard_securecode.gif') ?>" border="0" />&nbsp;&nbsp;<?php
+			        			break;
+			        		} 
+			        		case 'pci': {
+			        			?><img src="<?php echo $this->getSkinUrl('images/quickpaypayment/pci.gif') ?>" border="0" />&nbsp;&nbsp;<?php
+			        			break;
+			        		} 
+			        		case 'nets': {
+			        			?><img src="<?php echo $this->getSkinUrl('images/quickpaypayment/nets.png') ?>" border="0" />&nbsp;&nbsp;<?php
+			        			break;
+			        		} 
+			        		case 'euroline': {
+			        			?><img src="<?php echo $this->getSkinUrl('images/quickpaypayment/euroline.gif') ?>" border="0" />&nbsp;&nbsp;<?php
+			        			break;
+			        		} 
+			        	}
+					?>
+				<?php endforeach; ?>
+			<?php endif; ?>				      
+			<?php
+				/*
+				* Hvis vi skal vælge kort type inden betaling!
+				* IMPLEMENTERING KOMMER HER
+				* 
+				<input id="cardtypelock_creditcard" type="radio" name="cardtypelock" value="creditcard" selected="selected"/>
+				<label for="cardtypelock_creditcard">Creditcard</label><br/>
+				<input id="cardtypelock_danske-dk" type="radio" name="cardtypelock" value="danske-dk"/>
+				<label for="cardtypelock_danske-dk">Danske Netbank</label>
+				*/
+			?> 
+			<?php if ($payment->showCardsList()) : ?>
+		        <br>
+		        <br>
+			    <?php echo Mage::helper('quickpaypayment')->__('Du kan betale med følgende betalingsmetoder:') ?>
+			    <br>
+			    <?php $logoArray = explode(',', $payment->getConfigData('cardlogos')); ?>
+			    <?php foreach($logoArray as $item) : ?>
+				    <?php switch ($item) {
+			        		case 'dankort': {
+			        			?><img src="<?php echo $this->getSkinUrl('images/quickpaypayment/dankort.gif') ?>" border="0" title="Dankort" />&nbsp;&nbsp;<?php
+			        			break;
+			        		} 
+			        		case 'edankort': {
+			        			?><img src="<?php echo $this->getSkinUrl('images/quickpaypayment/edankort.gif') ?>" border="0" title="eDankort" />&nbsp;&nbsp;<?php
+			        			break;
+			        		} 
+			        		case 'danskenetbetaling': {
+			        			?><img src="<?php echo $this->getSkinUrl('images/quickpaypayment/danskenetbetaling.gif') ?>" border="0" title="Danske Bank Netbetaling" />&nbsp;&nbsp;<?php
+			        			break;
+			        		} 
+			        		case 'nordea': {
+			        			?><img src="<?php echo $this->getSkinUrl('images/quickpaypayment/nordea.gif') ?>" border="0" title="Nordea e-betaling" />&nbsp;&nbsp;<?php
+			        			break;
+			        		} 
+			        		case 'ewire': {
+			        			?><img src="<?php echo $this->getSkinUrl('images/quickpaypayment/ewire.gif') ?>" border="0" title="EWIRE" />&nbsp;&nbsp;<?php
+			        			break;
+			        		} 
+			        		case 'forbrugsforeningen': {
+			        			?><img src="<?php echo $this->getSkinUrl('images/quickpaypayment/forbrugsforeningen.gif') ?>" border="0" title="Forbrugsforeningen" />&nbsp;&nbsp;<?php
+			        			break;
+			        		} 
+			        		case 'visa': {
+			        			?><img src="<?php echo $this->getSkinUrl('images/quickpaypayment/visa.gif') ?>" border="0" title="VISA" />&nbsp;&nbsp;<?php
+			        			break;
+			        		} 
+			        		case 'visaelectron': {
+			        			?><img src="<?php echo $this->getSkinUrl('images/quickpaypayment/visaelectron.gif') ?>" border="0" title="VISA Electron" />&nbsp;&nbsp;<?php
+			        			break;
+			        		} 
+			        		case 'mastercard': {
+			        			?><img src="<?php echo $this->getSkinUrl('images/quickpaypayment/mastercard.gif') ?>" border="0" title="MasterCard" />&nbsp;&nbsp;<?php
+			        			break;
+			        		} 
+			        		case 'maestro': {
+			        			?><img src="<?php echo $this->getSkinUrl('images/quickpaypayment/maestro.gif') ?>" border="0" title="Maestro" />&nbsp;&nbsp;<?php
+			        			break;
+			        		} 
+			        		case 'jcb': {
+			        			?><img src="<?php echo $this->getSkinUrl('images/quickpaypayment/jcb.gif') ?>" border="0" title="JCB" />&nbsp;&nbsp;<?php
+			        			break;
+			        		} 
+			        		case 'diners': {
+			        			?><img src="<?php echo $this->getSkinUrl('images/quickpaypayment/diners.gif') ?>" border="0" title="Diners Club" />&nbsp;&nbsp;<?php
+			        			break;
+			        		} 
+			        		case 'amex': {
+			        			?><img src="<?php echo $this->getSkinUrl('images/quickpaypayment/amex.gif') ?>" border="0" title="AMEX" />&nbsp;&nbsp;<?php
+			        			break;
+			        		} 
+			        	}
+			        ?>
+				<?php endforeach; ?>
+			<?php endif; ?> 
+        </li>
+    </ul>
+</fieldset>
